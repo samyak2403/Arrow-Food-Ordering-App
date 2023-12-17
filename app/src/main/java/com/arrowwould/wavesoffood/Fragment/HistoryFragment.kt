@@ -1,8 +1,10 @@
 package com.arrowwould.wavesoffood.Fragment
 
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -51,25 +53,34 @@ class HistoryFragment : Fragment() {
         binding.recentbuyitem.setOnClickListener {
             seeItemsRecentBuy()
         }
+        binding.receivedButton.setOnClickListener {
+            updateOrderStatus()
+        }
         return binding.root
+    }
+
+    private fun updateOrderStatus() {
+        val itemPushKey = listOfOrderItem[0].itemPushKey
+        val completeOrderReference = database.reference.child("CompletedOrder").child(itemPushKey!!)
+        completeOrderReference.child("paymentReceived").setValue(true)
     }
 
     //function to see items recent buy
     private fun seeItemsRecentBuy() {
-        listOfOrderItem.firstOrNull()?.let { recentBuy->
-            val intent = Intent(requireContext(),RecentOrderItems::class.java)
-            intent.putExtra("RecentBuyOrderItem",listOfOrderItem)
+        listOfOrderItem.firstOrNull()?.let { recentBuy ->
+            val intent = Intent(requireContext(), RecentOrderItems::class.java)
+            intent.putExtra("RecentBuyOrderItem", listOfOrderItem)
             startActivity(intent)
         }
     }
 
     //function to retrieve items  buy history
     private fun retrieveBuyHistory() {
-
-        binding.recentbuyitem.visibility = View.INVISIBLE
+//        binding.recentbuyitem.visibility = View.INVISIBLE
         userId = auth.currentUser?.uid ?: ""
 
-        val buyItemReference: DatabaseReference = database.reference.child("user").child(userId).child("BuyHistory")
+        val buyItemReference: DatabaseReference =
+            database.reference.child("user").child(userId).child("BuyHistory")
         val shortingQuery = buyItemReference.orderByChild("currentTime")
 
         shortingQuery.addListenerForSingleValueEvent(object : ValueEventListener {
@@ -96,6 +107,7 @@ class HistoryFragment : Fragment() {
 
         })
     }
+
     // function to display the most recent oreder details
     private fun setDataInRecentBuyItem() {
         binding.recentbuyitem.visibility = View.VISIBLE
@@ -105,16 +117,20 @@ class HistoryFragment : Fragment() {
                 buyAgainFoodName.text = it.foodNames?.firstOrNull() ?: ""
                 buyAgainFoodPrice.text = it.foodPrices?.firstOrNull() ?: ""
                 val image = it.foodImages?.firstOrNull() ?: ""
-                val uri = Uri.parse(image)
-                Glide.with(requireContext()).load(uri).into(buyAgainFoodImage)
+//                val uri = Uri.parse(image)
+                Glide.with(requireContext()).load(image).into(buyAgainFoodImage)
 
-                listOfOrderItem.reverse()
-                if (listOfOrderItem.isNotEmpty()) {
-
+                val isOrderIsAccepted = listOfOrderItem[0].orderAccepted
+                Log.d("TAG", "setDataInRecentBuyItem: $isOrderIsAccepted")
+                if (isOrderIsAccepted){
+                    orderStutus.background.setTint(Color.GREEN)
+                    receivedButton.visibility = View.VISIBLE
                 }
+
             }
         }
     }
+
     // function to setup to recyclerview with previous order details
     private fun setPreviousBuyItemsRecyclerView() {
         val buyAgainFoodName = mutableListOf<String>()
